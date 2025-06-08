@@ -3,21 +3,578 @@
 
 \begin{document}
 
-\title{データベースおよび演習 中間レポート}
+\title{Next.js と Django を用いた在庫管理アプリケーションの仕様}
+\etitle{Specifications for an Inventory Management Application Using Next.js and Django}
 
 \affiliate{AIT}{愛知工業大学 情報科学部\\Department of Information Science, Aichi Institute of Technology}
-\author{多田 隆人}{Tada Ryuto}{AIT}
+\author{k23075 多田 隆人}{k23075 Tada Ryuto}{AIT}
 
 \begin{abstract}
-  データベースおよび演習の中間レポート用の \LaTeX の開発コンテナーです．
+  本稿は，Next.js と Django を用いた在庫管理アプリケーションの仕様をまとめたものである．
+  本アプリケーションでは商品の登録，在庫数の確認，仕入れ・卸し操作をブラウザ上で行える．
+  このアプリケーションについてシステム要件，機能設計，画面設計，データベース設計，API設計，実装環境，環境構築，実装詳細の手順をまとめた．
 \end{abstract}
 
 \maketitle
 
-\section{はじめに}
+\section{システム要件}
+本アプリケーションは商品の在庫管理を目的としたWebベースのシステムである．
+ユーザは商品の登録、在庫数の確認、仕入れ・卸し操作をブラウザ上で行える．
+仕入れ・卸し操作ができる他，CSVファイルをアップロードすると売上数の集計も行える．
 
-データベースおよび演習の中間レポート用の \LaTeX の開発コンテナー \cite{latex-devcontainer} です．
-docker-ubuntu-texlive-ja \cite{docker-ubuntu-texlive-ja}，梶研究室の論文用開発コンテナー \cite{kajilab-latex-devcontainer} 及び多田の論文たち用リポジトリ \cite{kajilab-papers} を参考にしています．
+ログイン画面，商品一覧画面，商品在庫管理画面，売上一括登録画面がある．
+ユーザは必ずログイン画面からログインを行う必要があり，ログイン後に商品一覧画面に遷移する．
+商品一覧画面では登録されている商品の情報を一覧で確認でき，商品情報の追加・編集・削除が行える．
+商品在庫管理画面では商品ごとに仕入れ数と売上数の管理ができ，在庫の履歴を確認できる．
+売上一括登録画面ではCSVファイルをアップロードすると年月ごとの売上数集計が表示される．
+
+
+\section{機能設計}
+機能設計では，アプリケーションが提供する機能を詳細に定義する．
+機能ごとに必要な要件を示す．
+
+ログイン機能があり，ユーザはアプリケーションにログインして利用を開始する．
+データベース上でユーザ情報を管理し，ログイン時に認証を行う．
+15分で自動的にログアウトを行い，セキュリティを確保する．
+今回は事前にshell上でユーザ登録を行う．
+
+ログアウト機能があり，ユーザはアプリケーションからログアウトできる．
+ログアウト後は再度ログイン機能を使用してログインする必要がある．
+
+商品一覧機能があり，登録されている商品の情報を一覧で確認できる．
+商品ID，商品名，単価，説明，商品在庫管理へのリンク，編集ボタンを表示する．
+
+商品追加機能があり，商品情報の追加ができる．
+商品一覧機能の右上部に商品追加ボタンがあり，クリックすると商品追加エリアが表示する．
+商品名，単価，説明を入力し，登録ボタンをクリックすると商品情報が登録する．
+商品名と単価は必須項目であり，未入力の場合は登録できない．
+単価は1円〜99999999円の範囲で入力する必要がある．
+入力が正しくない場合はエラーメッセージが表示する．
+商品IDは自動的に生成する．
+
+商品編集機能があり，商品情報の編集ができる．
+商品名，単価，説明を入力し，更新ボタンをクリックすると商品情報を更新する．
+編集後に更新ボタンをクリックすると商品情報を更新する．
+商品追加機能同様に入力が正しくない場合はエラーメッセージを表示する．
+
+商品削除機能があり，商品情報の削除ができる．
+商品削除ボタンをクリックすると商品情報を削除する．
+
+在庫管理機能があり，商品ごとに仕入れ数と売上数の管理できる．
+数量を入力し，商品仕入れボタンもしくは商品卸しボタンをクリックすると，商品在庫数を更新する．
+1から99999999までの範囲で入力する必要がある．
+入力が正しくない場合はエラーメッセージを表示する．
+
+在庫履歴機能があり，商品ごとの在庫履歴を確認できる．
+在庫履歴は処理種別(仕入れ or 卸し)，処理日時，単価，数量，価格，在庫数を表示する．
+在庫履歴は最新のものから順に表示する．
+
+売上一括登録機能があり，CSVファイルをアップロードすると年月ごとの売上数集計を登録できる．
+同期処理，非同期処理の両方行える．
+CSVファイルは product，date，quantity の3つの項目が必要である．
+
+売上数集計機能があり，年月ごとの売上数を集計して表示する．
+集計は売上一括登録機能で登録されたデータと在庫管理機能で登録されたデータを元に行う．
+集計結果は年月と売上数を表示する．
+
+
+\section{画面設計}
+画面設計では，アプリケーションの各画面のレイアウトと機能を定義する．
+画面ごとに備える機能とその配置を示す．
+
+ログイン画面を除く各画面はヘッダー・フッター・サイドバーを持ち，ログアウトと画面遷移を行う．
+ヘッダーにはアプリケーション名とログアウトボタンが配置される．
+ログアウトボタンをクリックするとログアウトが行われる．
+フッターにはコピーライト情報が表示される．
+サイドバーには商品一覧画面と売上一括登録画面へのリンクが配置される．
+
+ログイン画面では，認証機能を備える．
+画面上にはユーザ名とパスワードの入力欄があり，ログインボタンが配置される．
+ユーザ名とパスワードを入力後にログインボタンをクリックすると認証が行われ，成功した場合は商品一覧画面に遷移する．
+ユーザ名とパスワードは必須項目であり，未入力の場合はエラーメッセージが表示される．
+パスワードは8文字以上である必要があり，8文字未満の場合はエラーメッセージが表示される．
+また，ログイン失敗時にもエラーメッセージが表示される．
+
+商品一覧画面では，商品一覧機能・商品追加機能・商品編集機能・商品削除機能を備える．
+画面上には表で商品一覧が表示される．
+表左上部に商品追加ボタンがあり，クリックすると商品追加エリアが表示される．
+商品情報の編集は商品一覧画面の各商品情報の右側の編集ボタンをクリックすると行える．
+このとき削除ボタンも表示され，クリックすると商品情報が削除される．
+商品追加・削除時に入力が正しくない場合はテキストエリア下部にエラーメッセージが表示される．
+正常に登録・更新・削除が行われた場合は商品一覧が更新され，画面左下部にメッセージが表示される．
+表示数に制限はなく，全ての商品を表示する．
+
+商品在庫管理画面では，在庫管理機能と在庫履歴機能を備える．
+画面上部には商品名と数量の入力欄があり，商品仕入れボタンと商品卸しボタンが配置される．
+数量が正しくない場合は入力欄下部にエラーメッセージが表示される．
+正常に仕入れ・卸しが行われた場合は在庫数が更新され，画面左下部にメッセージが表示される．
+画面下部には在庫履歴が表形式で表示される．
+在庫履歴は最新のものから順に表示される．
+表示数に制限はなく，全ての履歴を表示する．
+
+売上一括登録画面では，売上一括登録機能と売上数集計機能を備える．
+画面上には年月ごとの売上数集計の一覧とファイル取込みエリアが表示される．
+ファイル取込みエリアには同期でファイル取込みと非同期でファイル取込みの2つがある．
+それぞれファイル選択エリアと登録ボタンが配置される．
+同期で登録した場合は，登録完了後に売上数集計が表示される．
+非同期で登録した場合は，瞬時に売上数集計の一覧が更新され，登録完了後に再度売上数集計が更新される．
+
+
+\section{データベース設計}
+本アプリケーションではデータベースで商品情報，仕入れ・売上履歴，売上ファイルの管理を行う．
+テーブルごとに説明する．
+
+% 商品テーブル
+商品テーブルでは商品名，単価，説明といった商品情報を管理する．
+商品テーブルのスキーマ定義を 表\ref{商品テーブルのスキーマ定義} に示す．
+id は主キーとして自動で連番が振られる．
+name と price は必須項目である．
+
+\begin{table}[t]
+  \caption{商品テーブルのスキーマ定義}
+  \vspace{3mm}
+  \centering
+  \begin{tabular}{c | c p{40mm}}
+    \hline\hline
+    \textbf{カラム名} & \textbf{データ型} & \textbf{制約}       \\
+    \hline
+    id            & bigint        & PK, AUTOINCREMENT \\
+    name          & varchar(100)  & NOT NULL          \\
+    price         & int           & NOT NULL          \\
+    description   & longtext      &                   \\
+    \hline
+  \end{tabular}
+  \label{商品テーブルのスキーマ定義}
+\end{table}
+
+% 仕入れテーブル
+仕入れテーブルでは商品ごとの仕入れ数を管理する．
+仕入れテーブルのスキーマ定義を 表\ref{仕入れテーブルのスキーマ定義} に示す．
+id は主キーとして自動で連番が振られる．
+product\_id は商品テーブルの id を参照する外部キーである．
+また，仕入れ数は必須項目である．
+
+\begin{table}[t]
+  \caption{仕入れテーブルのスキーマ定義}
+  \vspace{3mm}
+  \centering
+  \begin{tabular}{c | c p{40mm}}
+    \hline\hline
+    \textbf{カラム名}  & \textbf{データ型} & \textbf{制約}       \\
+    \hline
+    id             & bigint        & PK, AUTOINCREMENT \\
+    product\_id    & bigint        & FK (product.id)   \\
+    quantity       & int           & NOT NULL          \\
+    purchase\_date & datetime      & NOT NULL          \\
+    \hline
+  \end{tabular}
+  \label{仕入れテーブルのスキーマ定義}
+\end{table}
+
+% 売上ファイルテーブル
+売上ファイルテーブルでは売上ファイルの情報を管理する．
+売上ファイルテーブルのスキーマ定義を 表\ref{売上ファイルテーブルのスキーマ定義} に示す．
+id は主キーとして自動で連番が振られる．
+status は売上ファイルの状態を表しており，実際の値との対応を 表\ref{売上ファイルの状態} に示す．
+
+\begin{table}[t]
+  \caption{売上ファイルテーブルのスキーマ定義}
+  \vspace{3mm}
+  \centering
+  \begin{tabular}{c | c p{40mm}}
+    \hline\hline
+    \textbf{カラム名} & \textbf{データ型} & \textbf{制約}       \\
+    \hline
+    id            & bigint        & PK, AUTOINCREMENT \\
+    file\_name    & varchar(100)  & NOT NULL          \\
+    status        & int           & NOT NULL          \\
+    \hline
+  \end{tabular}
+  \label{売上ファイルテーブルのスキーマ定義}
+\end{table}
+
+\begin{table}[t]
+  \caption{売上ファイルの状態}
+  \vspace{3mm}
+  \centering
+  \begin{tabular}{c | p{30mm}}
+    \hline\hline
+    \textbf{値} & \textbf{状態} \\
+    \hline
+    0          & 同期          \\
+    1          & 非同期(未処理)    \\
+    2          & 非同期(処理済)    \\
+    \hline
+  \end{tabular}
+  \label{売上ファイルの状態}
+\end{table}
+
+
+\section{API設計}
+API設計では，アプリケーションが提供するAPIのエンドポイントとその機能を定義する．
+
+\subsection{ログインAPI}
+ログインAPIはJWT(JSON Web Token) \cite{jwt} を用いてユーザ認証を行うためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/login} であり，POSTメソッドのみを受け取る．
+リクエストボディにはユーザ名とパスワードを含むJSONオブジェクトを送信する．
+レスポンスとしては，認証に成功した場合はJWTトークンを Cookie に保存し，HTTPステータスコード 200 OK を返す．
+また，CookieにJWTトークンを保存し，次回以降のリクエストで認証を行う．
+認証に失敗した場合はエラーメッセージを含むJSONオブジェクトを返す．
+このとき，HTTPステータスコードは 401 Unauthorized を返す．
+
+\subsection{ログアウトAPI}
+ログアウトAPIはクライアント側の Cookie からJWTトークンを削除してログアウトを行うためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/logout} であり，POSTメソッドのみを受け取る．
+リクエストボディは不要であり，HTTPステータスコード 200 OK のみを返す．
+
+\subsection{リトライAPI}
+リトライAPIは非同期処理の再実行を行うためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/retry} であり，POSTメソッドのみを受け取る．
+HTTPヘッダー \texttt{HTTP\_REFRESH\_TOKEN} にはリフレッシュトークンを含める必要がある．
+認証に成功した場合は、HTTPステータスコード 200 OK を返し，新しいJWTトークンを Cookie に保存する．
+認証に失敗した場合はエラーメッセージを含むJSONオブジェクトを返し，HTTPステータスコード 401 Unauthorized を返す．
+
+\subsection{商品一覧API}
+商品一覧APIは登録されている商品の情報を取得するためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/products/{product\_id?}} であり，GET，POST，PUT，DELETEメソッドを受け取る．
+
+GETメソッドでは全ての商品情報を取得し，JSON形式でレスポンスを返す．
+また，パスパラメータとして商品IDを指定すると，特定の商品情報を取得可能である．
+商品数に制限はなく，全ての商品を返す．
+
+POSTメソッドでは新しい商品情報を登録するためのエンドポイントである．
+リクエストボディには商品名，単価，説明を含むJSONオブジェクトを送信する．
+登録に成功した場合は，HTTPステータスコード 201 Created を返し，新しい商品情報のJSONオブジェクトをレスポンスとして返す．
+
+PUTメソッドでは既存の商品情報を更新するためのエンドポイントである．
+パスパラメータとして更新する商品IDを指定する必要がある．
+リクエストボディには更新する商品情報を含むJSONオブジェクトを送信する．
+更新に成功した場合は，HTTPステータスコード 200 OK を返し，更新後の商品情報のJSONオブジェクトをレスポンスとして返す．
+
+DELETEメソッドでは特定の商品情報を削除するためのエンドポイントである．
+パスパラメータとして削除する商品IDを指定する必要がある．
+削除に成功した場合はHTTPステータスコード 200 OK を返す．
+
+\subsection{仕入れ・売上取得API}
+仕入れ・売上取得APIは商品ごとの仕入れ数と売上数の管理を行うためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/inventories/\{product\_id\}} であり，GETメソッドのみを受け取る．
+商品IDをパスパラメータとして指定する必要がある．
+商品IDが存在しない場合はHTTPステータスコード 404 Not Found を返す．
+リクエストに成功した場合は，商品ごとの仕入れ情報と売上情報を含むJSONオブジェクトをレスポンスとして返す．
+
+\subsection{仕入れ登録API}
+仕入れ登録APIは商品ごとの仕入れ数を登録するためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/purchase} であり，POSTメソッドのみを受け取る．
+リクエストボディには商品ID，仕入れ数，仕入れ日時を含むJSONオブジェクトを送信する．
+登録に成功した場合は，HTTPステータスコード 201 Created を返し，登録された仕入れ情報のJSONオブジェクトをレスポンスとして返す．
+
+\subsection{売上登録API}
+売上登録APIは商品ごとの売上数を登録するためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/sales} であり，POSTメソッドのみを受け取る．
+リクエストボディには商品ID，売上数，売上日時を含むJSONオブジェクトを送信する．
+登録に成功した場合は，HTTPステータスコード 201 Created を返し，登録された売上情報のJSONオブジェクトをレスポンスとして返す．
+
+
+\subsection{売上ファイル登録API}
+売上ファイル登録APIはCSVファイルをアップロードして売上数の集計を行うためのエンドポイントである．
+同期処理と非同期処理の2つを提供する．
+同期処理のエンドポイントは \texttt{/api/inventory/sales/sync} であり，POSTメソッドのみを受け取る．
+非同期処理のエンドポイントは \texttt{/api/inventory/sales/async} であり，POSTメソッドのみを受け取る．
+リクエストボディにはCSVファイルを含むマルチパートフォームデータを送信する．
+同期処理では，CSVファイルを解析して売上数を集計し，HTTPステータスコード 201 Created を返す．
+非同期処理では，CSVファイルを保存し，即座に HTTPステータスコード 201 Created を返す．
+その後，バッチ処理で非同期に売上数の集計を行い，処理が完了したら売上ファイルテーブルのステータスを更新する．
+
+\subsection{売上数集計API}
+売上数集計APIは年月ごとの売上数を集計して表示するためのエンドポイントである．
+エンドポイントは \texttt{/api/inventory/sales/summary} であり，GETメソッドのみを受け取る．
+リクエストボディは不要であり，レスポンスとしては年月とその売上数を含むJSONオブジェクトを返す．
+
+
+\section{実装}
+\subsection{実装環境}
+本アプリケーションは Next.js \cite{nextjs} と Django \cite{django} を用いて実装する．
+Next.js は React \cite{react} ベースのフレームワークであり，サーバサイドレンダリングや静的サイト生成をサポートしている．
+Django は Python ベースのWebフレームワークであり，迅速な開発とセキュリティを提供する．
+以下に実装環境の詳細を示す．
+
+\begin{itemize}
+  \item Mac OS: 14.6.1
+  \item Docker: 28.0.1
+  \item Node.js: v22.16.0
+  \item Next.js: 15.1.1
+  \item React: 19.0.0
+  \item Emotion: 11.14.0
+  \item Material UI: 7.1.0
+  \item TypeScript: 5.2.2
+  \item Django: 5.2.1
+  \item Python: 3.13.3
+  \item MySQL: 8.4.5
+\end{itemize}
+
+
+\subsection{環境構築}
+本アプリケーションは Docker Compose \cite{docker-compose} を用いてコンテナ化する．
+Docker Compose を使用すると，複数のコンテナを一括で管理できるため，開発環境の構築が容易になる．
+frontend， backend，db の3つのサービスを定義する．
+
+\subsubsection{データベース}
+db サービスは MySQL を実行するコンテナであり，ポート 53306 を公開する．
+healthcheck を使用して MySQL の起動を確認する．
+\texttt{mysqladmin ping} コマンドを使用して MySQL が起動しているかを確認し，5秒ごとに最大5回まで確認を行う．
+
+環境変数を使用して MySQL の初期設定を行う．
+環境変数を用いると，コンテナ起動時に設定を簡単に変更できる \cite{docker-mysql-image}．
+設定する環境変数は以下の通りである．
+
+\begin{itemize}
+  \item MYSQL\_ROOT\_PASSWORD: root パスワード
+  \item MYSQL\_DATABASE: 初期データベース名
+  \item TZ: タイムゾーン
+\end{itemize}
+
+
+\subsubsection{バックエンド}
+backend サービスは Django を実行するコンテナであり，ポート 8000 を公開する．
+docker image は \texttt{python:3.13-bullseye} \cite{docker-python-image} を使用する．
+volumes を使用してデータの永続化とホストマシンにおけるホットリロードを実現する．
+また，depends\_on を使用して db サービスが起動してから backend サービスが起動するようにする．
+ENTRYPOINT には python manage.py runserver 0.0.0.0:8000 --settings config.settings.development を指定する．
+
+\texttt{django-admin} コマンドを使用してプロジェクトを作成する．
+\texttt{django-admin startproject config .} コマンドを実行しプロジェクトを作成すると，\texttt{manage.py} ファイルと \texttt{config} ディレクトリが生成される．
+\texttt{django-admin startapp inventory} コマンドを実行しアプリケーションを作成すると，\texttt{inventory} ディレクトリが生成される．
+\texttt{settings.py} ファイルに以下の設定を追加する．
+
+\begin{itemize}
+  \item INSTALLED\_APPS: inventory アプリケーションを追加する．
+  \item DATABASES: db サービスの MySQL データベースを使用するように設定する．
+  \item LANGUAGE\_CODE: 'ja-jp' を指定し，日本語を使用する．
+  \item LOGGING: ログ出力の設定を追加する．
+\end{itemize}
+
+
+\subsubsection{フロントエンド}
+frontend サービスは Next.js を実行するコンテナであり，ポート 3000 を公開する．
+docker image は \texttt{node:22-slim} \cite{docker-node-image} を使用する．
+volumes を使用してデータの永続化とホストマシンにおけるホットリロードを実現する．
+ENTRYPOINT には \texttt{yarn dev} を指定する．
+
+\texttt{npx create-next-app@15.1.1} \cite{create-next-app} コマンドを実行しプロジェクトを作成する．
+また，今回は App Router \cite{nextjs-approuter} と Material UI \cite{mui} を使用する．
+
+App Router \cite{nextjs-approuter} は Next.js の新しいルーティングシステムであり，ページベースのルーティングを提供する．
+コンポーネントごとにクライアントコンポーネントとサーバコンポーネント \cite{react-server-components} を選択できる．
+これによりページごとに異なるデータフェッチング戦略を選択できるため，柔軟なアプリケーションの構築が可能となる．
+
+Material UI \cite{mui} は Google の Material Design に基づいた React コンポーネントライブラリである．
+スタイリングとコンポーネントの再利用性を向上させるために使用する．
+
+Next.js の Rewrites\cite{nextjs-rewrites} を使用してリクエストをバックエンドの Django サーバーに転送する．
+\texttt{/api/:path*} のリクエストを \texttt{http://host.docker.internal:8000/api/:path*/} に転送するように設定する．
+これによりCORSエラーを回避してバックエンドのAPIにアクセスできる．
+
+\section{実装詳細}
+
+\subsection{モデルの実装}
+データベースのテーブルを Django のモデルとして実装する方法を示す．
+モデルは \texttt{models.py} ファイルに \texttt{Model} クラスを継承して実装する．
+
+型ごとにフィールドを用いて定義する．
+\texttt{null=True} \texttt{blank=True} を指定すると NULL 値を許容し，任意項目にできる．
+また \texttt{verbose\_name} を指定するとフィールドの表示名を設定できる．
+型ごとのフィールド定義を 表\ref{型ごとのフィールド定義} に示す．
+
+\begin{table}[t]
+  \caption{型ごとのフィールド定義}
+  \vspace{3mm}
+  \centering
+  \begin{tabular}{c | c p{35mm}}
+    \hline\hline
+    \textbf{データ型} & \textbf{フィールド名} \\
+    \hline
+    int           & IntegerField    \\
+    bigint        & BigIntegerField \\
+    varchar       & CharField       \\
+    longtext      & TextField       \\
+    datetime      & DateTimeField   \\
+    FK            & ForeignKey      \\
+    \hline
+  \end{tabular}
+  \label{型ごとのフィールド定義}
+\end{table}
+
+\texttt{IntegerChoices} を使用して定数を定義し，選択肢を設定できる．
+変数名は大文字で定義し，実際の値と説明を設定する．
+\texttt{IntegerField} に対して \texttt{choices} に指定すると選択肢を設定できる．
+
+
+\subsection{APIの実装}
+Django REST Frameworkを使用してAPIエンドポイントを実装する方法を示す．
+API は \texttt{views.py} ファイルに実装する．
+
+\subsubsection{ログイン・ログアウト機能}
+ユーザ認証には \texttt{djangorestframework-simplejwt}\cite{simple-jwt} を用いて JWT を使用する．
+\texttt{settings.py} の \texttt{REST\_FRAMEWORK.DEFAULT\_AUTHENTICATION\_CLASSES} に \texttt{AccessJWTAuthentication} と \texttt{JWTAuthentication} を追加し，JWT 認証を有効にする．
+\texttt{REST\_FRAMEWORK.DEFAULT\_PERMISSION\_CLASSES} には \texttt{IsAuthenticated} を指定し，認証済みのユーザのみがAPIにアクセスできるようにする．
+\texttt{SIMPLE\_JWT} の設定を行い，トークンの有効期限を15分に設定する．
+\texttt{COOKIE\_TIME} を設定し，Cookie の有効期限を15分に設定する．
+また，\texttt{TIME\_ZONE} を Asia/Tokyo に設定し，タイムゾーンを日本に合わせる．
+これにより，JWT トークンの検証を行う際にタイムゾーンの問題を回避できる．
+
+ログイン時には \texttt{TokenObtainPairSerializer} によるシリアライザを定義し，ユーザ名とパスワードを検証する．
+\texttt{serializer.is\_valid} を用いて検証を行う．
+検証に成功した場合はJWTトークンを生成し，\texttt{response.set\_cookie} を用いてCookie に保存する．
+検証に失敗した場合は例外処理を行い，401 Unauthorized エラーを返す．
+
+ログアウト時には Cookie から JWT トークンを削除する．
+\texttt{response.delete\_cookie} を使用して Cookie からトークンを削除する．
+
+
+\subsubsection{商品一覧・追加・編集・削除機能}
+商品を一覧取得・追加・編集・削除するAPIを実装する．
+各HTTPメソッドごとにクラスメソッドを定義する．
+Productテーブルは \texttt{Product} モデルを使用して操作する．
+\texttt{ModelSerializer} を継承した \texttt{ProductSerializer} を使用して商品情報をシリアライズする．
+
+GETメソッドでは全ての商品情報を取得するためのエンドポイントを定義する．
+\texttt{Product.objects.all()}  を使用して全ての商品情報を取得し，JSON形式でレスポンスを返す．
+また，商品IDをパスパラメータとして指定した場合は \texttt{Product.objects.get()} を使用して特定の商品情報を取得する．
+
+POSTメソッドでは新しい商品情報を登録するためのエンドポイントを定義する．
+リクエストボディには商品名，単価，説明を含むJSONオブジェクトを送信する．
+\texttt{ProductSerializer} を使用してリクエストデータをシリアライズし，\texttt{serializer.is\_valid()} を使用して検証を行う．
+検証に成功した場合は \texttt{serializer.save()} を使用して商品情報を登録し，HTTPステータスコード 201 Created を返す．
+
+PUTメソッドでは既存の商品情報を更新するためのエンドポイントを定義する．
+パスパラメータとして削除する商品IDを指定し，リクエストボディには更新する商品情報を含むJSONオブジェクトを送信する．
+\texttt{Product.objects.get()} を使用して更新する商品情報を取得し，\texttt{ProductSerializer} を使用してリクエストデータをシリアライズし検証を行う．
+検証に成功した場合は \texttt{serializer.save()} を使用して商品情報を更新し，HTTPステータスコード 200 OK を返す．
+
+DELETEメソッドでは特定の商品情報を削除するためのエンドポイントを定義する．
+パスパラメータとして削除する商品IDを指定する．
+\texttt{Product.objects.get()} を使用して削除する商品情報を取得し，\texttt{product.delete()} を使用して商品情報を削除する．
+
+\subsubsection{在庫管理機能}
+商品仕入れ・卸しAPIを実装する．
+それぞれ \texttt{APIView} クラスを継承した \texttt{PurchaseView} と \texttt{SaleView} を定義する．
+\texttt{ModelSerializer} を継承した \texttt{PurchaseSerializer} と \texttt{SaleSerializer} を使用して仕入れ・売上情報をシリアライズし検証を行う．
+仕入れ時は検証に成功した場合は \texttt{PurchaseSerializer.save()} を使用して仕入れ情報を登録し，HTTPステータスコード 201 Created を返す．
+卸し時は検証に成功した場合は在庫数を超えないかを確認したのちに卸し情報を登録し，HTTPステータスコード 201 Created を返す．
+在庫数を超えた場合は \texttt{BusinessException} を用いてエラーメッセージを返す．
+
+\subsubsection{在庫履歴機能}
+在庫履歴APIを実装する．
+\texttt{ListAPIView} クラスを継承した \texttt{SalesList} を定義する．
+\texttt{Sales.objects.annotate()} を使用し月毎に集計した在庫履歴を取得し，\texttt{Sum('quantity')} を使用して数量を集計する．
+\texttt{SalesSerializer} を使用して在庫履歴をシリアライズし，JSON形式でレスポンスを返す．
+
+\subsubsection{売上一括登録機能}
+売上一括登録APIを同期処理として実装する．
+\texttt{Serializer} を継承した \texttt{FileSerializer} を使用してCSVファイルをシリアライズし検証を行う．
+検証に成功した場合は \texttt{open()} 関数を使用してCSVファイルを保存する．
+\texttt{SalesFile}モデルを使用して同期ファイルとしてファイル情報を登録する．
+\texttt{pandas} ライブラリを使用してCSVデータをDataFrameに変換し，売上数を集計する．
+集計結果は \texttt{Sales} モデルを使用して登録し，HTTPステータスコード 201 Created を返す．
+
+売上一括登録APIを非同期処理として実装する．
+同期処理と同様に \texttt{open()} 関数を使用してCSVファイルを保存する．
+検証に成功した場合は \texttt{open()} 関数を使用してCSVファイルを保存する．
+\texttt{SalesFile} モデルを使用して非同期ファイルとしてファイル情報を登録する．
+この時点で HTTPステータスコード 201 Created を返す．
+．
+その後，バッチ処理を用いて非同期に売上数の集計を行う．
+\texttt{BaseCommand} を継承した \texttt{Command} クラスを定義し，\texttt{handle()} メソッドで非同期処理を実装する．
+\texttt{SalesFile.objects.filter()} を使用して未処理の非同期ファイルを取得し，\texttt{pandas} ライブラリを使用してCSVデータをDataFrameに変換する．
+集計結果は \texttt{Sales} モデルを使用して登録し，\texttt{SalesFile} モデルのステータスを更新する．
+
+
+\subsection{フロントエンドの実装}
+Next.js を使用してフロントエンドを実装する方法を示す．
+
+\subsubsection{ディレクトリ構成}
+Next.js の App Router を使用したディレクトリ構成を示す．
+\texttt{app} ディレクトリ以下にページやコンポーネントを配置する．
+ファイルベースのルーティングを使用し，ディレクトリ名がそのままURLパスとなる．
+\texttt{layout.tsx} ファイルではそのファイルの階層以下のページのレイアウトを定義できる \cite{nextjs-layout-and-pages}．
+\texttt{page.tsx} ファイルではそれぞれのページのコンテンツを定義できる．
+またフォルダ名に \texttt{[id]} のように指定すると動的ルーティングが可能となる．
+
+\subsubsection{フェッチャーの実装}
+APIとの通信を行うフェッチャーを実装する．
+フェッチャーは \texttt{plugins/axios.ts} ファイルに実装する．
+\texttt{axios} ライブラリ \cite{axios} を使用してAPIとの通信を行う．
+
+\texttt{axios.create()} を使用してインスタンスを作成する．
+\texttt{headers} に \texttt{Content-Type: application/json} を指定し，JSON形式でリクエストを送信する．
+
+レスポンスインターセプターでは成功時と失敗時のハンドリングを行う．
+成功時にはレスポンスデータをそのまま返す．
+401 Unauthorized エラーが発生した場合は リフレッシュトークンを使用して再認証を行う．
+このとき，ログイン処理の場合は再認証は行わずエラーを返す．
+再認証失敗時にはログイン画面にリダイレクトする．
+
+
+\subsubsection{ログイン画面}
+ログイン画面は \texttt{app/login/page.tsx} に実装する．
+フォーム要素は Material UI の \texttt{TextField} コンポーネントと \texttt{Button} コンポーネントを使用して実装する．
+入力情報は \texttt{react-hook-form} \cite{react-hook-form} の \texttt{useForm} を使用して管理する．
+ユーザ名やパスワードの入力欄が未入力の場合や適切でない場合は \texttt{register} を用いて検証を行いエラーメッセージを表示する．
+ログインボタンをクリックすると \texttt{handleSubmit} を使用してフォームの送信を行う．
+送信時にはフェッチャーを使用してログインAPIにリクエストを送信する．
+
+\subsubsection{レイアウト}
+レイアウトは \texttt{app/inventory/layout.tsx} に実装する．
+レイアウトではヘッダー・フッター・サイドバーを含む共通のレイアウトを定義する．
+サイドバーのリンクは Material UI の \texttt{List} コンポーネントを使用して実装する．
+
+\subsubsection{商品一覧画面}
+商品一覧画面は \texttt{app/inventory/products/page.tsx} に実装する．
+商品情報を取得するために \texttt{useEffect} フックを使用してフェッチャーを呼び出す．
+取得した商品情報は Material UI の \texttt{TableContainer} コンポーネントを使用して表形式で表示する．
+商品追加フォームは Material UI の \texttt{TextField} コンポーネントと \texttt{Button} コンポーネントを使用して実装する．
+入力情報は \texttt{react-hook-form} の \texttt{useForm} を使用して管理する．
+入力情報が適切でない場合は \texttt{register} を用いて検証を行いエラーメッセージを表示する．
+登録ボタンをクリックすると \texttt{handleSubmit} を使用してフォームの送信を行う．
+送信時にはフェッチャーを使用して商品一覧APIにリクエストを送信する．
+
+\texttt{useState} フックを用いて編集中の商品IDを管理する．
+初期値は \texttt{null} とする．
+編集ボタンをクリックすると編集中の商品IDを設定し，IDが一致する商品情報をフォームに表示する．
+登録・更新・キャンセル時には再び \texttt{null} を設定する．
+また，処理の状態(\texttt{add}，\texttt{edit}，\texttt{delete})を \texttt{useState} フックで管理する．
+完了ボタンをクリックすると処理の状態に応じて商品情報を登録・更新・削除する．
+処理の状態に応じてフェッチャーを使用して商品一覧APIにリクエストを送信する．
+
+\subsubsection{在庫管理画面}
+在庫管理画面は \texttt{app/inventory/products/[id]/page.tsx} に実装する．
+\texttt{useParams} フックを使用して商品IDを取得する．
+\texttt{useEffect} フックを使用して初期レンダリング時に在庫情報を取得する．
+在庫情報は Material UI の \texttt{TableContainer} コンポーネントを使用して表形式で表示する．
+
+在庫処理フォームは Material UI の \texttt{TextField} コンポーネントと \texttt{Button} コンポーネントを使用して実装する．
+入力情報は \texttt{react-hook-form} の \texttt{useForm} を使用して管理する．
+入力情報が適切でない場合は \texttt{register} を用いて検証を行いエラーメッセージを表示する．
+仕入れボタンもしくは卸しボタンをクリックすると \texttt{handleSubmit} を使用してフォームの送信を行う．
+送信時にはフェッチャーを使用して仕入れ・売上取得APIにリクエストを送信する．
+
+\subsubsection{売上一括登録画面}
+売上一括登録画面は \texttt{app/inventory/import\_sales/page.tsx} に実装する．
+\texttt{useEffect} フックを使用して初期レンダリング時に売上情報を取得する．
+売上情報は Material UI の \texttt{TableContainer} コンポーネントを使用して表形式で表示する．
+
+Material UI の \texttt{MuiFileInput} コンポーネントを使用してファイル選択エリアを実装する．
+登録ボタンをクリックすると \texttt{handleSubmit} を使用してフォームの送信を行う．
+送信時にはフェッチャーを使用して売上ファイル登録APIにリクエストを送信する．
+
+
+\section{まとめ}
+本稿では，Next.js と Django を用いた在庫管理アプリケーションの仕様をまとめた．
+本アプリケーションでは商品の登録、在庫数の確認、仕入れ・卸し操作をブラウザ上で行える．
+このアプリケーションについてシステム要件、機能詳細、データベース設計、実装環境、環境設定、動作検証の結果をまとめた．
+今後の課題としては，ユーザ管理機能の追加が挙げられる．
+現在は事前に shell 上でユーザ登録を行う必要があるが，Web上でユーザ登録を行えるようにする必要がある．
+
 
 \input{sections/bibliography}
 
