@@ -1,6 +1,77 @@
+% bibtex を通すための宣言（\bibliography は preamble で aux 書き込みのみに上書き済み）
 \bibliographystyle{ipsjunsrt}
+\bibliography{references}
 
+% 実際の参考文献出力（日本語形式）
 \begingroup
 \let\em\upshape
-\bibliography{references}
+\begin{thebibliography}{99}
+
+\bibitem{owasp-authn}
+OWASP Foundation, 「Authentication Cheat Sheet」, OWASP Cheat Sheet Series,
+（2026年6月取得, \url{https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html}）．
+
+\bibitem{rfc7519}
+Jones, Michael B., Bradley, John, Sakimura, Nat, 「RFC 7519: JSON Web Token (JWT)」,
+Internet Engineering Task Force（IETF）,
+（2026年6月取得, \url{https://www.rfc-editor.org/rfc/rfc7519}）．
+
+\bibitem{owasp-session}
+OWASP Foundation, 「Session Management Cheat Sheet」, OWASP Cheat Sheet Series,
+（2026年6月取得, \url{https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html}）．
+
+\bibitem{react-hook-form}
+Lau, Bill, 「React Hook Form」, React Hook Form,
+（2026年6月取得, \url{https://react-hook-form.com/}）．
+
+\bibitem{nextjs-approuter}
+Vercel, Inc., 「Next.js App Router: Getting Started」, Next.js Documentation,
+（2026年6月取得, \url{https://nextjs.org/docs/app/getting-started}）．
+
+\bibitem{axios-docs}
+Axios contributors, 「Axios --- Promise Based HTTP Client」, Axios,
+（2026年6月取得, \url{https://axios.rest/pages/getting-started/first-steps}）．
+
+\bibitem{mui-docs}
+MUI SAS, 「Material UI --- Overview」, Material UI,
+（2026年6月取得, \url{https://mui.com/material-ui/getting-started/}）．
+
+\bibitem{mysql-docs}
+Oracle Corporation, 「MySQL 8.0 Reference Manual」, MySQL,
+（2026年6月取得, \url{https://dev.mysql.com/doc/refman/8.0/en/}）．
+
+\bibitem{simple-jwt}
+Jazzband contributors, 「Simple JWT」, Simple JWT Documentation,
+（2026年6月取得, \url{https://django-rest-framework-simplejwt.readthedocs.io/en/latest/}）．
+
+\bibitem{drf-docs}
+Encode OSS Ltd., 「Django REST Framework」, Django REST Framework,
+（2026年6月取得, \url{https://www.django-rest-framework.org/}）．
+
+\bibitem{nextjs-docs}
+Vercel, Inc., 「Next.js Documentation」, Next.js,
+（2026年6月取得, \url{https://nextjs.org/docs}）．
+
+\bibitem{react-docs}
+Meta Platforms, Inc., 「React --- The Library for Web and Native User Interfaces」, React,
+（2026年6月取得, \url{https://react.dev/}）．
+
+\bibitem{devcontainer-vscode}
+Microsoft Corporation, 「Developing inside a Container --- Visual Studio Code」,
+Visual Studio Code Documentation,
+（2026年6月取得, \url{https://code.visualstudio.com/docs/devcontainers/containers}）．
+
+\bibitem{docker-compose-docs}
+Docker, Inc., 「Docker Compose --- Overview」, Docker Documentation,
+（2026年6月取得, \url{https://docs.docker.com/compose/}）．
+
+\bibitem{django-docs}
+Django Software Foundation, 「Django Documentation」, Django,
+（2026年6月取得, \url{https://docs.djangoproject.com/en/4.2/}）．
+
+\bibitem{nextjs-rewrites}
+Vercel, Inc., 「next.config.js: rewrites」, Next.js Documentation,
+（2026年6月取得, \url{https://nextjs.org/docs/app/api-reference/config/next-config-js/rewrites}）．
+
+\end{thebibliography}
 \endgroup

@@ -1,0 +1,12 @@
+flowchart LR
+    login([ログイン画面])
+    list([商品一覧画面])
+    inv([在庫管理画面])
+    sales([売上一括登録画面])
+
+    login -->|認証成功| list
+    list -->|商品選択| inv
+    inv -->|戻る| list
+    list -->|サイドバー| sales
+    sales -->|サイドバー| list
+    list -->|ログアウト| login
