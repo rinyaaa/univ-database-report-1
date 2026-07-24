@@ -1402,10 +1402,7 @@ Short Paper%
 
 
 % copyright
-\DeclareTextCommandDefault{\textcopyrighttx}{%
-{\fontfamily{txsy}\textcircled{%
-\usefont{OT1}{ptm}{m}{n}\selectfont%
-c}}}
+\DeclareTextCommandDefault{\textcopyrighttx}{\textcopyright}
 
 
 
